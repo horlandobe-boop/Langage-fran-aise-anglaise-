@@ -1,7 +1,7 @@
 {
-  "name": "bot-gemini-malagasy",
-  "version": "1.0.0",
-  "description": "Telegram Bot Gemini Language Tutor with Payment Verification",
+  "name": "bot-gemini-malagasy-v2",
+  "version": "2.0.0",
+  "description": "Bot Telegram Gemini Payment & Vision Fixed",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
