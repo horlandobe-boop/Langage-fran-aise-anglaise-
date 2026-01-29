@@ -1,7 +1,7 @@
 {
-  "name": "bot-fampianarana-fiteny",
+  "name": "bot-fampianarana-mada",
   "version": "1.0.0",
-  "description": "Bot Telegram mampianatra teny vahiny sy mitantana paiement via Gemini AI",
+  "description": "Bot Telegram mampianatra teny vahiny sy mitantana paiement",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
