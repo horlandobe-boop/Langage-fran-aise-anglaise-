@@ -1,14 +1,14 @@
 {
-  "name": "bot-gemini-malagasy-v2",
-  "version": "2.0.0",
-  "description": "Bot Telegram Gemini Payment & Vision Fixed",
+  "name": "bot-gemini-malagasy-fix",
+  "version": "3.0.0",
+  "description": "Bot Gemini Fix Vision and Voice",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "telegraf": "^4.16.3",
-    "@google/generative-ai": "^0.1.3",
+    "@google/generative-ai": "^0.21.0",
     "firebase": "^10.7.1",
     "axios": "^1.6.5",
     "moment": "^2.30.1",
