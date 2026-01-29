@@ -1,0 +1,21 @@
+{
+  "name": "bot-fampianarana-fiteny",
+  "version": "1.0.0",
+  "description": "Bot Telegram mampianatra teny vahiny sy mitantana paiement via Gemini AI",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.15.3",
+    "firebase": "^10.7.1",
+    "@google/generative-ai": "^0.1.3",
+    "express": "^4.18.2",
+    "axios": "^1.6.5",
+    "dotenv": "^16.3.1",
+    "luxon": "^3.4.4"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
