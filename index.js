@@ -1,25 +1,22 @@
 /*
- * BOT TELEGRAM GEMINI - LANGUAGE TUTOR & PAYMENT VERIFIER
- * Created for: Ravelomanantsoa Urmin
+ * BOT TELEGRAM GEMINI - PAYMENT FIXED & VISION UPDATE
+ * Updated for: Ravelomanantsoa Urmin
  */
 
 const { Telegraf, Markup } = require('telegraf');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { initializeApp } = require("firebase/app");
-const { getFirestore, doc, getDoc, setDoc, updateDoc, collection } = require("firebase/firestore");
+const { getFirestore, doc, getDoc, setDoc, updateDoc } = require("firebase/firestore");
 const axios = require('axios');
 const moment = require('moment-timezone');
 const express = require('express');
 
 // --- 1. CONFIGURATION ---
 
-// Telegram Bot Token
 const BOT_TOKEN = "8505202299:AAHkmuoq3Mlqn7VZw_pupLG4FT76Qr4HBeo";
-
-// Admin ID
 const ADMIN_ID = "8207051152";
 
-// Gemini API Keys Pool
+// API Keys Gemini (Rotation)
 const GEMINI_API_KEYS = [
     "AIzaSyDtd9oI9r7CCEO6BfukyBgq_LH8PRc51GM",
     "AIzaSyBGwU-Nx-Nw8Abh7GIYKvXgJ44CMt5-dPs",
@@ -33,16 +30,15 @@ const GEMINI_API_KEYS = [
     "AIzaSyCgivxeIowWSnoZ_WhlmarA3J3djW2g84A"
 ];
 
-// Firebase Config
+// Configuration Firebase Vaovao
 const firebaseConfig = {
-    apiKey: "AIzaSyDPrTWmxovZdbbi0BmXr6Tn6AyrlaO0cbM",
-    authDomain: "bot-asa-en-ligne-mada.firebaseapp.com",
-    databaseURL: "https://bot-asa-en-ligne-mada-default-rtdb.firebaseio.com",
-    projectId: "bot-asa-en-ligne-mada",
-    storageBucket: "bot-asa-en-ligne-mada.firebasestorage.app",
-    messagingSenderId: "837671675184",
-    appId: "1:837671675184:web:2cd55ef7eacac7e33554f5",
-    measurementId: "G-72CKQLX75V"
+  apiKey: "AIzaSyDbtw2NBkjWC5xs0BZ9mhK3FtxVeXfDGYE",
+  authDomain: "autotrad-9e90b.firebaseapp.com",
+  projectId: "autotrad-9e90b",
+  storageBucket: "autotrad-9e90b.firebasestorage.app",
+  messagingSenderId: "359414519740",
+  appId: "1:359414519740:web:8c6b99de8769ad1dda3db9",
+  measurementId: "G-RGNLJVKNZK"
 };
 
 // Initialize Firebase
@@ -52,47 +48,16 @@ const db = getFirestore(app);
 // Initialize Bot
 const bot = new Telegraf(BOT_TOKEN);
 
-// --- 2. UTILITY FUNCTIONS ---
+// --- 2. FONCTION UTILITAIRE ---
 
-// Function to get a random Gemini Key (Rotation)
-function getGeminiModel(modelName = "gemini-1.5-flash") {
+// Maka API Key kisendrasendra (Rotation)
+function getGeminiModel(modelName = "gemini-2.5-flash") {
     const randomKey = GEMINI_API_KEYS[Math.floor(Math.random() * GEMINI_API_KEYS.length)];
     const genAI = new GoogleGenerativeAI(randomKey);
     return genAI.getGenerativeModel({ model: modelName });
 }
 
-// Function to check subscription status
-async function checkSubscription(userId) {
-    const userRef = doc(db, "users", String(userId));
-    const userSnap = await getDoc(userRef);
-
-    if (!userSnap.exists()) {
-        // New user: Start 2-day trial
-        const now = moment().tz("Indian/Antananarivo");
-        const trialEnd = now.clone().add(2, 'days');
-        
-        await setDoc(userRef, {
-            joinedAt: now.toISOString(),
-            status: 'trial',
-            expiryDate: trialEnd.toISOString(),
-            language: 'English', // Default
-            usageCount: 0
-        });
-        return { valid: true, type: 'trial', message: 'Faly miarahaba anao! Manana 2 andro maimaim-poana ianao hanandramana.' };
-    }
-
-    const userData = userSnap.data();
-    const expiryDate = moment(userData.expiryDate);
-    const now = moment().tz("Indian/Antananarivo");
-
-    if (now.isAfter(expiryDate)) {
-        return { valid: false, type: 'expired', message: 'Tapitra ny fotoana fanandramana na ny abonnement anao.' };
-    }
-
-    return { valid: true, type: userData.status };
-}
-
-// Function to download file from Telegram
+// Télécharger fichier depuis Telegram
 async function downloadFile(url) {
     const response = await axios({
         url,
@@ -102,115 +67,190 @@ async function downloadFile(url) {
     return Buffer.from(response.data, 'binary');
 }
 
-// --- 3. BOT LOGIC: PAYMENT & VISION ---
+// Fanamarinana Abonnement (CORRECTED)
+async function checkSubscription(userId) {
+    const userRef = doc(db, "users", String(userId));
+    const userSnap = await getDoc(userRef);
+    const now = moment().tz("Indian/Antananarivo");
 
-// Handle Photo (Payment Verification)
+    // Raha mpampiasa vaovao (Tsy hita ao amin'ny base)
+    if (!userSnap.exists()) {
+        const trialEnd = now.clone().add(2, 'days'); // +2 andro manomboka izao
+        
+        // Mamorona compte
+        await setDoc(userRef, {
+            joinedAt: now.toISOString(),
+            status: 'trial',
+            expiryDate: trialEnd.toISOString(),
+            language: 'Anglais',
+            usageCount: 0
+        });
+
+        // Averina avy hatrany hoe EKENA satria vao nanomboka
+        return { 
+            valid: true, 
+            type: 'trial', 
+            message: '🎉 Tongasoa! Manana 2 andro maimaim-poana ianao hanandramana ny serivisy.' 
+        };
+    }
+
+    // Raha efa misy compte
+    const userData = userSnap.data();
+    const expiryDate = moment(userData.expiryDate);
+
+    if (now.isAfter(expiryDate)) {
+        return { 
+            valid: false, 
+            type: 'expired', 
+            message: '⚠️ Tapitra ny fotoana fanandramana na ny abonnement anao.' 
+        };
+    }
+
+    return { valid: true, type: userData.status };
+}
+
+// --- 3. LOGIQUE SARY (VISION & PAIEMENT) ---
+
 bot.on('photo', async (ctx) => {
     const userId = String(ctx.from.id);
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
+    const subStatus = await checkSubscription(userId); // Zahana ny status
 
-    // Only process photos if user is expired or explicit command (logic simplified: check all photos if user is expired)
-    // Or if user just sent a photo, we assume it's payment proof.
-    
-    await ctx.reply("⏳ Mahandrasa kely, mijery ny porofo ny fandoavam-bola ny Gemini AI...");
+    await ctx.replyWithChatAction('typing');
 
     try {
-        // Get file link
-        const photo = ctx.message.photo[ctx.message.photo.length - 1];
+        // 1. Raisina ilay sary
+        const photo = ctx.message.photo[ctx.message.photo.length - 1]; // Ny sary lehibe indrindra
         const fileLink = await ctx.telegram.getFileLink(photo.file_id);
         const imageBuffer = await downloadFile(fileLink.href);
-
-        // Convert buffer to base64 for Gemini
         const imageBase64 = imageBuffer.toString('base64');
-
-        // Current Time Context for Gemini
         const now = moment().tz("Indian/Antananarivo");
-        const currentTimeString = now.format("YYYY-MM-DD HH:mm");
 
-        const model = getGeminiModel("gemini-1.5-flash"); // Flash is faster for vision
-        
-        const prompt = `
-        Act as a Payment Auditor. Use the current time in Madagascar: ${currentTimeString}.
-        Analyze this mobile money receipt screenshot strictly.
-        
-        Required Criteria:
-        1. Recipient Number must be: "0323911654" (Ravelomanantsoa Urmin).
-        2. Amount must be at least 2000 Ar.
-        3. Date must be today.
-        4. Time validation: The transaction time in the image must be within 15 minutes of ${currentTimeString}.
-        5. Extract the Transaction ID (Reference).
+        const model = getGeminiModel("gemini-1.5-flash");
 
-        Return ONLY a JSON object like this (no markdown):
-        {
-            "is_recipient_correct": boolean,
-            "is_amount_correct": boolean,
-            "is_time_valid": boolean,
-            "transaction_id": "string_or_null",
-            "reason": "explanation in Malagasy"
-        }
-        `;
+        // --- CAS 1: RAHA TAPITRA NY ABONNEMENT (Verification Paiement) ---
+        if (!subStatus.valid) {
+            await ctx.reply("🔍 Mijery ny rosia (réçu) nalefanao ny Gemini...");
 
-        const result = await model.generateContent([
-            prompt,
-            { inlineData: { data: imageBase64, mimeType: "image/jpeg" } }
-        ]);
-
-        const responseText = result.response.text();
-        // Clean response to get pure JSON
-        const jsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const analysis = JSON.parse(jsonString);
-
-        console.log("Payment Analysis:", analysis);
-
-        if (analysis.is_recipient_correct && analysis.is_amount_correct && analysis.is_time_valid && analysis.transaction_id) {
+            const currentTimeString = now.format("YYYY-MM-DD HH:mm");
             
-            // CHECK DATABASE FOR DUPLICATE TRANSACTION ID
-            const txRef = doc(db, "transactions", analysis.transaction_id);
-            const txSnap = await getDoc(txRef);
+            // Prompt hentitra ho an'ny Paiement
+            const paymentPrompt = `
+            Act as a Payment Auditor for a generic mobile money receipt.
+            Current Time in Madagascar: ${currentTimeString}.
+            
+            Analyze this image. Is it a transaction receipt?
+            If NO, set "is_receipt": false.
+            
+            If YES, extract:
+            1. Recipient Number (Must contain "0323911654").
+            2. Amount (Must be >= 2000).
+            3. Time (Must be within 20 minutes of ${currentTimeString}).
+            4. Transaction Reference/ID.
 
-            if (txSnap.exists()) {
-                await ctx.reply("❌ Efa nampiasaina io Référence io. Tsy azo averina intsony.");
-                // Notify Admin
-                bot.telegram.sendMessage(ADMIN_ID, `⚠️ FRAUD ATTEMPT:\nUser: ${ctx.from.first_name}\nTxID: ${analysis.transaction_id} (Duplicate)`);
-            } else {
-                // SUCCESS: Update User Subscription
-                const newExpiry = moment().tz("Indian/Antananarivo").add(30, 'days');
-                
-                await updateDoc(userRef, {
-                    status: 'premium',
-                    expiryDate: newExpiry.toISOString()
-                });
+            JSON OUTPUT ONLY:
+            {
+                "is_receipt": boolean,
+                "recipient_match": boolean,
+                "amount_match": boolean,
+                "time_match": boolean,
+                "transaction_id": "string",
+                "reason_malagasy": "reason string"
+            }
+            `;
 
-                // Save Transaction
-                await setDoc(txRef, {
-                    userId: userId,
-                    date: now.toISOString(),
-                    amount: 2000
-                });
+            const result = await model.generateContent([
+                paymentPrompt,
+                { inlineData: { data: imageBase64, mimeType: "image/jpeg" } }
+            ]);
 
-                await ctx.reply(`✅ Voaray ny vola! Misaotra anao. \n\nAfaka manohy ny fianarana ianao izao mandritra ny 30 andro.\nExpiry: ${newExpiry.format("DD/MM/YYYY")}`);
-                bot.telegram.sendMessage(ADMIN_ID, `💰 NEW PAYMENT:\nUser: ${ctx.from.first_name}\nAmount: 2000Ar\nTxID: ${analysis.transaction_id}`);
+            const responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+            let analysis;
+            
+            try {
+                analysis = JSON.parse(responseText);
+            } catch (e) {
+                console.log("JSON Parse Error:", responseText);
+                return ctx.reply("❌ Tsy voavaky tsara ny sary. Azafady alefaso sary mazava tsara (Capture d'écran original).");
             }
 
-        } else {
-            // FAILED Verification by Gemini
-            await ctx.reply(`❌ Tsy nekena ny fandoavam-bola.\n\nAntony: ${analysis.reason}\n\nAzafady, avereno jerena ny fepetra (15 minitra ny fe-potoana, laharana 0323911654).`);
-            bot.telegram.sendMessage(ADMIN_ID, `🚫 FAILED PAYMENT:\nUser: ${ctx.from.first_name}\nReason: ${analysis.reason}`);
+            // Validations
+            if (!analysis.is_receipt) {
+                return ctx.reply("❌ Tsy rosia (réçu) io sary io. Alefaso ny porofo nandefasana vola.");
+            }
+
+            if (analysis.recipient_match && analysis.amount_match && analysis.time_match && analysis.transaction_id) {
+                
+                // Hamarina sao efa nampiasaina ny ID
+                const txRef = doc(db, "transactions", analysis.transaction_id);
+                const txSnap = await getDoc(txRef);
+
+                if (txSnap.exists()) {
+                    await ctx.reply("❌ Efa nampiasaina io Référence io. Tsy azo averina.");
+                    bot.telegram.sendMessage(ADMIN_ID, `⚠️ FRAUD: User ${ctx.from.first_name} tried duplicate ID ${analysis.transaction_id}`);
+                } else {
+                    // ACCEPTED
+                    const newExpiry = moment().tz("Indian/Antananarivo").add(30, 'days');
+                    await updateDoc(doc(db, "users", userId), {
+                        status: 'premium',
+                        expiryDate: newExpiry.toISOString()
+                    });
+                    
+                    await setDoc(txRef, {
+                        userId: userId,
+                        date: now.toISOString(),
+                        amount: 2000,
+                        ref: analysis.transaction_id
+                    });
+
+                    await ctx.reply(`✅ Voaray ny vola! Misaotra anao.\nAfaka mianatra ianao izao hatramin'ny ${newExpiry.format("DD/MM/YYYY")}.`);
+                    bot.telegram.sendMessage(ADMIN_ID, `💰 PAYMENT: ${ctx.from.first_name} - 2000Ar - Ref: ${analysis.transaction_id}`);
+                }
+            } else {
+                // REJECTED
+                await ctx.reply(`❌ Nolavina ny fandoavam-bola.\nAntony: ${analysis.reason_malagasy}\n\nFitsipika: Laharana 0323911654, Vola 2000Ar, ary latsaky ny 15 minitra ny fotoana.`);
+                bot.telegram.sendMessage(ADMIN_ID, `🚫 REJECTED: ${ctx.from.first_name} - Reason: ${analysis.reason_malagasy}`);
+            }
+
+        } 
+        // --- CAS 2: RAHA MANANA ABONNEMENT (Fianarana @ alalan'ny sary) ---
+        else {
+            await ctx.reply("👁️ Mijery ny sarinao aho...");
+            
+            // Raisina ny fiteny ankehitriny
+            const userSnap = await getDoc(doc(db, "users", userId));
+            const targetLang = userSnap.data().language || 'Anglais';
+
+            const generalPrompt = `
+            You are a language tutor. The user is learning ${targetLang}.
+            Look at this image.
+            1. Describe what is in the image in ${targetLang}.
+            2. Then, explain the key vocabulary in Malagasy.
+            3. Keep it helpful and educational.
+            `;
+
+            const result = await model.generateContent([
+                generalPrompt,
+                { inlineData: { data: imageBase64, mimeType: "image/jpeg" } }
+            ]);
+
+            await ctx.reply(result.response.text());
         }
 
     } catch (error) {
-        console.error("Error processing payment:", error);
-        await ctx.reply("Nisy olana teo amin'ny famakiana ny sary. Azafady alefaso sary mazava tsara.");
+        console.error("Error Image:", error);
+        await ctx.reply("Nisy olana kely tamin'ny famakiana sary. Avereno afaka fotoana fohy.");
     }
 });
 
-// --- 4. BOT LOGIC: LANGUAGE PRACTICE ---
+// --- 4. LOGIQUE FIANARANA (TEXTE & VOCAL) ---
 
 bot.command('start', async (ctx) => {
     const subStatus = await checkSubscription(ctx.from.id);
     
+    // Na dia tapitra aza, asehoy ihany ny menu fa rehefa mifidy vao bloquer-na
+    // na asehoy ny message d'accueil raha vao tonga
     if (!subStatus.valid) {
+        // Raha tapitra, alefa avy hatrany ny demande paiement
         return sendPaymentPrompt(ctx);
     }
 
@@ -220,135 +260,94 @@ bot.command('start', async (ctx) => {
     ]).resize();
 
     await ctx.reply(
-        `Salama! Izaho no Gemini Teacher anao.\n${subStatus.message}\n\nMisafidiana taranja iray tianao hianarana:`,
+        `Salama! ${subStatus.message}\n\nMisafidiana taranja tianao hianarana:`,
         keyboard
     );
 });
 
-// Handle Language Selection
+// Misafidy fiteny
 const languages = ['🇬🇧 Anglais', '🇫🇷 Français', '🇩🇪 Allemagne', '🇮🇹 Italienne'];
 bot.hears(languages, async (ctx) => {
     const subStatus = await checkSubscription(ctx.from.id);
     if (!subStatus.valid) return sendPaymentPrompt(ctx);
 
-    const lang = ctx.message.text.split(' ')[1]; // Extract name (e.g., Anglais)
-    
-    // Update user language preference
-    await updateDoc(doc(db, "users", String(ctx.from.id)), {
-        language: lang
-    });
+    const lang = ctx.message.text.split(' ')[1]; 
+    await updateDoc(doc(db, "users", String(ctx.from.id)), { language: lang });
 
-    await ctx.reply(`D'accord! Hiresaka amin'ny teny **${lang}** isika izao. \nAzonao atao ny manoratra na mandefa feo (vocal). \nRaha misy diso dia hanitsy anao aho ary hanazava amin'ny teny Malagasy.`);
+    await ctx.reply(`D'accord! Hiresaka amin'ny teny **${lang}** isika. \nAzonao atao ny manoratra, mandefa feo, na mandefa sary hianarana.`);
 });
 
-// Helper: Payment Prompt
+// Message ho an'ny fandoavam-bola
 async function sendPaymentPrompt(ctx) {
     const message = `
-🛑 **Tapitra ny fotoana fanandramana/abonnement anao.**
+🛑 **Tapitra ny fotoana fanandramana/abonnement.**
 
-Mba ahafahana manohy dia mila mandoa **2000 Ar** isam-bolana ianao.
+Mba ahafahana manohy dia mila mandoa **2000 Ar** ianao.
 
-📞 Alefaso amin'ity laharana ity ny vola:
-**0323911654** (RAVELOMANANTSOA URMIN)
+📞 Alefaso amin'ny: **0323911654** (RAVELOMANANTSOA URMIN)
 
 ⚠️ **Torolalana:**
 1. Alefaso ny vola.
-2. Makà "Capture d'écran" (Sary) ny reçu.
-3. Alefaso eto amin'ny bot avy hatrany ilay sary.
-4. **Fanamarihana:** Mila alefa ao anatin'ny 15 minitra aorian'ny fandefasana vola ny sary, raha tsy izany dia ho reduser.
+2. Makà "Capture d'écran" mazava ny reçu.
+3. Alefaso eto amin'ny bot ilay sary ao anatin'ny **15 minitra**.
     `;
     await ctx.replyWithMarkdown(message);
 }
 
-// Handle Text & Voice Messages (The Core Learning Logic)
+// Traitement Texte sy Feo
 bot.on(['text', 'voice'], async (ctx) => {
-    // 1. Check Subscription
     const subStatus = await checkSubscription(ctx.from.id);
-    if (!subStatus.valid) {
-        return sendPaymentPrompt(ctx);
-    }
+    if (!subStatus.valid) return sendPaymentPrompt(ctx);
 
-    // 2. Get User Context (Language)
     const userSnap = await getDoc(doc(db, "users", String(ctx.from.id)));
-    const targetLang = userSnap.exists() ? userSnap.data().language : 'Anglais';
+    const targetLang = userSnap.data().language || 'Anglais';
 
     let userContent = "";
-    let isVoice = false;
-
-    // 3. Process Input (Text or Voice)
+    
+    // Raha feo
     if (ctx.message.voice) {
         await ctx.replyWithChatAction('typing');
         const fileLink = await ctx.telegram.getFileLink(ctx.message.voice.file_id);
         const audioBuffer = await downloadFile(fileLink.href);
         const audioBase64 = audioBuffer.toString('base64');
-        
-        userContent = {
-            inlineData: {
-                mimeType: "audio/ogg",
-                data: audioBase64
-            }
-        };
-        isVoice = true;
+        userContent = { inlineData: { mimeType: "audio/ogg", data: audioBase64 } };
     } else {
         userContent = ctx.message.text;
     }
 
-    // 4. Send to Gemini
     try {
-        if (!isVoice) await ctx.replyWithChatAction('typing');
+        if (!ctx.message.voice) await ctx.replyWithChatAction('typing');
         
-        const model = getGeminiModel("gemini-2.5-flash"); // Flash is fast and cheap
+        const model = getGeminiModel("gemini-1.5-flash");
         
         const systemPrompt = `
-        You are a helpful language tutor teaching ${targetLang}.
-        The user speaks Malagasy and learns ${targetLang}.
+        You are a language tutor teaching ${targetLang}. The user speaks Malagasy.
         
-        Rules:
-        1. If the user writes/speaks in ${targetLang}, reply naturally in ${targetLang} to keep the conversation going.
-        2. If the user makes a mistake, correct them gently. Explain the correction in MALAGASY.
-        3. If the user asks a question in Malagasy, explain the answer in Malagasy but give examples in ${targetLang}.
-        4. Be encouraging and empathetic.
-        5. Keep responses concise (under 200 words) suitable for a chat.
+        1. If user speaks ${targetLang}, reply in ${targetLang}.
+        2. Correct mistakes gently and explain in MALAGASY.
+        3. Explain definitions in Malagasy but give examples in ${targetLang}.
+        4. Keep it short and conversational.
         `;
 
-        const result = await model.generateContent([
-            systemPrompt,
-            "Student says:",
-            userContent
-        ]);
-
-        const reply = result.response.text();
-        await ctx.reply(reply);
+        const result = await model.generateContent([systemPrompt, userContent]);
+        await ctx.reply(result.response.text());
 
     } catch (error) {
         console.error("Gemini Error:", error);
-        await ctx.reply("Miala tsiny, somary sahirana kely ny tambajotra. Avereno afaka fotoana fohy.");
+        await ctx.reply("Miala tsiny, misy olana kely. Avereno afaka fotoana fohy.");
     }
 });
 
-// --- 5. SERVER SETUP (FOR RENDER & CRON-JOB) ---
+// --- 5. SERVER KEEP-ALIVE ---
 
 const expressApp = express();
 const PORT = process.env.PORT || 3000;
 
-expressApp.get('/', (req, res) => {
-    res.send('Gemini Bot is Active!');
-});
+expressApp.get('/', (req, res) => res.send('Bot Active'));
+expressApp.get('/keep-alive', (req, res) => res.status(200).send('Ping OK'));
 
-// Keep-alive endpoint
-expressApp.get('/keep-alive', (req, res) => {
-    res.status(200).send('Ping received');
-});
+expressApp.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-expressApp.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
-// Start Bot
-bot.launch().then(() => {
-    console.log('Bot is running...');
-});
-
-// Enable graceful stop
+bot.launch();
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
