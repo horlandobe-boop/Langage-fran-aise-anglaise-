@@ -15,73 +15,155 @@ const GEMINI_API_KEYS = [
     "AIzaSyAVCGGC4-aPzjney5pHHFqYUx-lZ72gJtM", "AIzaSyCgivxeIowWSnoZ_WhlmarA3J3djW2g84A"
 ];
 
-// Firebase Setup
-const firebaseConfig = {
-    projectId: "bot-asa-en-ligne-mada",
-    // Ampidiro eto ny serviceAccount raha hivoaka production (JSON file)
-};
-admin.initializeApp({
-    credential: admin.credential.applicationDefault(), 
-    databaseURL: "https://bot-asa-en-ligne-mada-default-rtdb.firebaseio.com"
-});
+// Firebase Setup (Ampiasao ny Database URL mivantana ho an'ny Render)
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert({
+            projectId: "bot-asa-en-ligne-mada",
+            // Raha manana serviceAccountKey ianao dia ampidiro eto, raha tsy izany dia ampiasao ny configuration ambany
+        }),
+        databaseURL: "https://bot-asa-en-ligne-mada-default-rtdb.firebaseio.com"
+    });
+}
 const db = admin.firestore();
-
-// Express ho an'ny Render (Keep-alive)
-const app = express();
-app.get('/', (req, res) => res.send('Bot is running!'));
-app.listen(process.env.PORT || 3000);
 
 const bot = new Telegraf(BOT_TOKEN);
 let keyIndex = 0;
 
-// Function haka API Key mifandimby
-function getGeminiAPI() {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEYS[keyIndex]);
+function getGeminiModel() {
+    const key = GEMINI_API_KEYS[keyIndex];
+    const genAI = new GoogleGenerativeAI(key);
     keyIndex = (keyIndex + 1) % GEMINI_API_KEYS.length;
     return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 }
 
-// --- LOGIC MOMBA NY MPAMPIASA ---
-async function checkSubscription(ctx, next) {
+// --- BAIKO /START ---
+bot.start(async (ctx) => {
     const userId = ctx.from.id.toString();
-    const userRef = db.collection('users').doc(userId);
-    const doc = await userRef.get();
+    const welcomeMsg = `👋 Salama ${ctx.from.first_name}! 
+Tongasoa eto amin'ny Bot ianarana teny vahiny.
 
-    const now = new Date();
+📚 Matière azo atao:
+- Anglais 🇬🇧
+- Français 🇫🇷
+- Allemagne 🇩🇪
+- Italienne 🇮🇹
 
-    if (!doc.exists) {
-        await userRef.set({
-            joinedAt: admin.firestore.Timestamp.now(),
-            status: 'trial',
-            expiryDate: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
-        });
+✅ Manana 2 andro maimaim-poana ianao izao hanandrana azy.
+Afaka mandefa feo (vocal) na lahatsoratra (écrit) ianao.`;
+
+    try {
+        const userRef = db.collection('users').doc(userId);
+        const doc = await userRef.get();
+        if (!doc.exists) {
+            await userRef.set({
+                joinedAt: admin.firestore.Timestamp.now(),
+                status: 'trial',
+                expiryDate: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000))
+            });
+        }
+        ctx.reply(welcomeMsg);
+    } catch (e) {
+        console.error(e);
+        ctx.reply("Misy olana kely ny fidirana, andramo indray.");
+    }
+});
+
+// --- CHECK SUBSCRIPTION MIDDLEWARE ---
+async function checkUserStatus(ctx, next) {
+    const userId = ctx.from.id.toString();
+    try {
+        const userRef = db.collection('users').doc(userId);
+        const doc = await userRef.get();
+        const userData = doc.data();
+        const now = admin.firestore.Timestamp.now();
+
+        if (userData && now.seconds > userData.expiryDate.seconds) {
+            return ctx.reply(`⚠️ Tapitra ny fe-potoana maimaim-poana.
+            
+Mba hanohizana ny fampiasana ny AI mandritra ny 30 andro:
+💰 Sarany: 2000 Ar / volana
+📞 Laharana: 0323911654
+👤 Anarana: RAVELOMANANTSOA URMIN
+
+Rehefa lasa ny vola, alefaso eto ny SARY porofon'ny transaction (Screenshot).`);
+        }
+        return next();
+    } catch (e) {
         return next();
     }
-
-    const userData = doc.data();
-    if (now > userData.expiryDate.toDate()) {
-        return ctx.reply("⚠️ Tapitra ny fanandramana maimaim-poana (2 andro).\n\nMba hanohizana, handefaso 2000 Ar ity laharana ity:\n📞 0323911654 (RAVELOMANANTSOA URMIN)\n\nAvy eo, alefaso eto ny SARY (Screenshot) porofon'ny fandefasana vola.");
-    }
-    return next();
 }
 
-// --- FANDRAISANA SARY (PAYMENT VERIFICATION) ---
+// --- FANDRAISANA SARY (VERIFICATION PAYEMENT) ---
 bot.on('photo', async (ctx) => {
-    const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-    const link = await ctx.telegram.getFileLink(fileId);
-    
-    ctx.reply("🔄 Eo am-panamarinana ny fandoavam-bola...");
+    try {
+        const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+        const fileUrl = await ctx.telegram.getFileLink(fileId);
+        
+        ctx.reply("⏳ Eo am-panamarinana ny sary... Miandrasa kely azafady.");
 
-    const model = getGeminiAPI();
-    const prompt = `
-        Ity misy sary porofon'ny fandoavam-bola (Mobile Money). 
-        Jereo tsara ireto fepetra ireto:
-        1. Ny daty dia tokony androany ${new Date().toLocaleDateString()}.
-        2. Ny ora dia tsy mahazo mihoatra ny 15 minitra amin'izao ${new Date().toLocaleTimeString()}.
-        3. Ny laharana nidiran'ny vola dia 0323911654.
-        4. Ny vola nalefa dia farafahakeliny 2000ar.
-        5. Ny Transaction ID dia tsy tokony ho efa nampiasaina.
+        const response = await axios.get(fileUrl.href, { responseType: 'arraybuffer' });
+        const model = getGeminiModel();
+        
+        const prompt = `
+        Ity misy sary porofon'ny fandoavam-bola. Jereo tsara:
+        - Daty: Mila androany (Ankehitriny)
+        - Ora: Tsy mahazo mihoatra ny 15 minitra amin'izao fotoana izao.
+        - Laharana: 0323911654.
+        - Montant: 2000ar farafahakeliny.
+        - Transaction ID: Jereo tsara raha efa nisy taloha.
 
+        Raha marina ny zava-drehetra, valio fotsiny hoe "OK_VALIDATED".
+        Raha misy diso, hazavao amin'ny teny Malagasy hoe inona no tsy mety.`;
+
+        const imagePart = {
+            inlineData: { data: Buffer.from(response.data).toString("base64"), mimeType: "image/jpeg" }
+        };
+
+        const result = await model.generateContent([prompt, imagePart]);
+        const responseText = result.response.text();
+
+        if (responseText.includes("OK_VALIDATED")) {
+            await db.collection('users').doc(ctx.from.id.toString()).update({
+                status: 'paid',
+                expiryDate: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+            });
+            ctx.reply("✅ Ekena ny fandoavam-bola! Afaka mampiasa ny Bot ianao mandritra ny 30 andro manomboka izao.");
+        } else {
+            ctx.reply("❌ Nolavina ny fandoavam-bola:\n\n" + responseText);
+        }
+    } catch (error) {
+        ctx.reply("Nisy olana teo am-pamakiana ny sary. Avereno indray azafady.");
+    }
+});
+
+// --- CHAT LOGIC (TEXT & VOICE) ---
+bot.on(['text', 'voice'], checkUserStatus, async (ctx) => {
+    try {
+        const model = getGeminiModel();
+        let userMessage = ctx.message.text || "Nandefa feo ny mpampiasa, ampio izy amin'ny fanononana.";
+
+        const prompt = `Ianao dia mpampianatra teny vahiny (Anglais, Français, Allemagne, Italienne). 
+        Ny tanjona dia pratique vocal sy écrit ihany. 
+        Raha misy diso ny teniny, hazavao amin'ny teny Malagasy ny fahadisoany.
+        Admin: 8207051152.
+        Mpampiasa: ${userMessage}`;
+
+        const result = await model.generateContent(prompt);
+        ctx.reply(result.response.text());
+    } catch (err) {
+        ctx.reply("Misy olana kely amin'ny API. Andramo indray afaka fotoana fohy.");
+    }
+});
+
+// Express for Render
+const app = express();
+app.get('/', (req, res) => res.send('Bot is Live!'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    bot.launch();
+});
         Raha feno ireo, valio hoe "OK_PAID". Raha misy diso, hazavao amin'ny teny Malagasy ny antony nandavana azy.
     `;
 
